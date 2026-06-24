@@ -1,0 +1,83 @@
+{
+  "template_name": "תחשיב זכויות אישי",
+  "template_file": "תחשיב זכויות אישי.docx",
+  "excel_columns": {
+    "MEMBER_CODE": "C",
+    "LAST_NAME": "E",
+    "FIRST_NAME": "F",
+    "H": "H",
+    "I": "I",
+    "J": "J",
+    "L": "L",
+    "M": "M",
+    "O": "O",
+    "P": "P",
+    "R": "R",
+    "BANK_ACCOUNT": "S",
+    "T": "T"
+  },
+  "computed_fields": {
+    "FULL_NAME": "{LAST_NAME} {FIRST_NAME}"
+  },
+  "conditions": {
+    "show_DEATH_SECTION": "L > 0",
+    "show_WORK_GRANT_SECTION": "O > 0",
+    "show_NEW_MEMBER_SECTION": "T == 'נקלט.ת'",
+    "show_BUILDING_DEBT_SECTION": "R != ''"
+  },
+  "output_filename": {
+    "pattern": "{MEMBER_CODE} {LAST_NAME} {FIRST_NAME} {template_name}.pdf"
+  },
+  "signature_field": {
+    "field_name": "MemberSignature",
+    "page": "last",
+    "width": 200,
+    "height": 52,
+    "margin_bottom": 118,
+    "margin_left": 108,
+    "anchor_text": "חתימה (שדה לחתימה דיגיטלית)"
+  },
+  "validation": {
+    "required_excel_columns": [
+      "C",
+      "E",
+      "F",
+      "H",
+      "I",
+      "J",
+      "L",
+      "M",
+      "O",
+      "P",
+      "S"
+    ],
+    "required_template_variables": [
+      "FULL_NAME",
+      "TODAY",
+      "H",
+      "I",
+      "J",
+      "L",
+      "M",
+      "O",
+      "P",
+      "BANK_ACCOUNT"
+    ],
+    "required_row_fields": [
+      "MEMBER_CODE",
+      "LAST_NAME",
+      "FIRST_NAME",
+      "BANK_ACCOUNT",
+      "P"
+    ],
+    "numeric_row_fields": [
+      "H",
+      "I",
+      "J",
+      "L",
+      "M",
+      "O",
+      "P"
+    ]
+  }
+}

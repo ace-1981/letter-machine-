@@ -1,0 +1,26 @@
+{
+  "template_name": "תחשיב זכויות אישי",
+  "excel_columns": {
+    "FULL_NAME": "F+E",
+    "H": "ותק",
+    "I": "סכום קבוע",
+    "J": "סכום לפי ותק",
+    "L": "תוספת נפטרים",
+    "M": "סהכ",
+    "O": "חוב מענק עידוד עבודה",
+    "P": "סהכ אחרי קיזוז",
+    "BANK_ACCOUNT": "S"
+  },
+  "conditions": {
+    "DEATH_SECTION": "L > 0",
+    "WORK_GRANT_SECTION": "O > 0",
+    "NEW_MEMBER_SECTION": "T == 'נקלט.ת'",
+    "BUILDING_DEBT_SECTION": "R != ''"
+  },
+  "texts": {
+    "DEATH_SECTION": "תוספת בגין מקרה פטירה: התוספת מתחלקת בין החברים הזכאים בהתאם לפירוט.",
+    "WORK_GRANT_SECTION": "קיזוז בגין מענק עידוד עבודה כמפורט בתחשיב.",
+    "NEW_MEMBER_SECTION": "זכאותך תקום לאחר קבלתך לחברות בקיבוץ.",
+    "BUILDING_DEBT_SECTION": "ידוע לי כי יש לי חוב בגין בנייה פרטית אשר יקוזז מסכום זה."
+  }
+}

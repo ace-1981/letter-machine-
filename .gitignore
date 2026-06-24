@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+.venv/
+venv/
+.env
+
+# PyInstaller
+LetterGenerator/build/
+LetterGenerator/dist/
+*.spec
+
+# Portable release binaries (build locally; GitHub limit 100MB)
+LetterGenerator_release/app.exe
+LetterGenerator_release/output/
+
+# Generated outputs
+**/*.pdf
+**/errors_report.csv
+**/qa_summary.json
+**/_temp_*
+**/_runtime_*
+**/_json_test/
+**/_docx_test/
+**/_final_*
+
+# Logs
+*.log
+LetterGenerator/poc_log.txt
+cursor/build_log.txt
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Test artifacts
+LetterGenerator/samples/json_influence_test/_temp_config.json
