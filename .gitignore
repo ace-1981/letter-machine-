@@ -15,6 +15,18 @@ LetterGenerator/dist/
 # Portable release binaries (build locally; GitHub limit 100MB)
 LetterGenerator_release/app.exe
 LetterGenerator_release/output/
+LetterGenerator_V1.1_Portable/app.exe
+LetterGenerator_V1.1_Portable/**/app.exe
+*.zip
+
+# Local audit / test copies
+Audit Folder With Spaces/
+בדיקת מחולל V1.2/
+cursor/v1_2_audit/samples/
+LetterGenerator/samples/o0_debug/
+LetterGenerator/samples/o0_debug2/
+LetterGenerator/samples/o0_fix_test/
+LetterGenerator/samples/_dbg.docx
 
 # Generated outputs
 **/*.pdf

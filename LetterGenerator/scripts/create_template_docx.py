@@ -16,8 +16,11 @@ from docx.shared import Cm, Pt, RGBColor
 DARK_BLUE = RGBColor(0x1F, 0x4E, 0x79)
 DARK_BLUE_HEX = "1F4E79"
 LIGHT_BLUE_HEX = "D9EAF7"
+SIG_BOX_MARKER = "⟦SIG_BOX⟧"
+DATE_BOX_MARKER = "⟦DATE_BOX⟧"
 ZEBRA_HEX = "F2F2F2"
 WHITE_HEX = "FFFFFF"
+TOTAL_ROW_HEX = "E8F0F8"
 LINK_BLUE = RGBColor(0x05, 0x63, 0xC1)
 
 FONT_NAME = "Arial"
@@ -131,13 +134,13 @@ def _shade(cell, fill_hex: str) -> None:
     cell._tc.get_or_add_tcPr().append(shd)
 
 
-def _borders(cell, color="BFBFBF", dashed=False) -> None:
+def _borders(cell, color="BFBFBF", dashed=False, sz="4") -> None:
     val = "dashed" if dashed else "single"
     b = OxmlElement("w:tcBorders")
     for side in ("top", "left", "bottom", "right"):
         e = OxmlElement(f"w:{side}")
         e.set(qn("w:val"), val)
-        e.set(qn("w:sz"), "4")
+        e.set(qn("w:sz"), sz)
         e.set(qn("w:color"), color)
         b.append(e)
     cell._tc.get_or_add_tcPr().append(b)
@@ -349,67 +352,11 @@ def _header(doc) -> None:
 
 
 def _calc_table(doc) -> None:
-    t = doc.add_table(rows=9, cols=3)
-    t.alignment = WD_TABLE_ALIGNMENT.RIGHT
-    _table_rtl(t)
-    _table_width(t, 18.3)
-
-    widths = (1.3, 11.0, 2.6)
-    for row in t.rows:
-        for i, w in enumerate(widths):
-            row.cells[i].width = Cm(w)
-
-    headers = ("סעיף", "תיאור", "סכום (₪)")
-    header_align = (
-        WD_ALIGN_PARAGRAPH.CENTER,
-        WD_ALIGN_PARAGRAPH.RIGHT,
-        WD_ALIGN_PARAGRAPH.RIGHT,
-    )
-    _row_height(t.rows[0], TABLE_HEADER_HEIGHT)
-    for i, h in enumerate(headers):
-        _cell(
-            t.rows[0].cells[i],
-            h,
-            bold=True,
-            fill=DARK_BLUE_HEX,
-            align=header_align[i],
-            white=True,
-            size=Pt(11),
-        )
-        _borders(t.rows[0].cells[i], color=DARK_BLUE_HEX)
-
-    rows = [
-        ("1", "מספר שנים לצורך התחשיב", "{{H}}"),
-        ("2", "סכום בגין שנת ותק אחת", "10 ₪"),
-        ("3", "מספר שנים כפול סכום משתנה", "{{J}}"),
-        ("4", "תוספת שווה לכל זכאי", "{{I}}"),
-        ("5", "תוספת בגין פטירה", "{{L}}"),
-        ("6", 'סה"כ זכאות', "{{M}}"),
-        ("7", "קיזוז בגין מענק עידוד עבודה", "{{O}}"),
-        ("ח", 'סה"כ אחרי קיזוז \'מענק עידוד עבודה\'', "{{P}}"),
-    ]
-    for ri, (num, desc, amt) in enumerate(rows, 1):
-        bold = ri in (6, 8)
-        fill = ZEBRA_HEX if ri % 2 == 0 else WHITE_HEX
-        vals = (num, desc, amt)
-        aligns = (
-            WD_ALIGN_PARAGRAPH.CENTER,
-            WD_ALIGN_PARAGRAPH.RIGHT,
-            WD_ALIGN_PARAGRAPH.RIGHT,
-        )
-        _row_height(t.rows[ri], TABLE_ROW_HEIGHT)
-        for ci, val in enumerate(vals):
-            is_amount = ci == 2
-            _cell(
-                t.rows[ri].cells[ci],
-                val,
-                bold=bold,
-                fill=fill,
-                align=aligns[ci],
-                amount=is_amount,
-            )
-            _borders(t.rows[ri].cells[ci])
-    _para(doc, after=4)
+    p = _para(doc, after=8)
+    p.paragraph_format.left_indent = Cm(0)
+    p.paragraph_format.right_indent = Cm(0)
+    r = p.add_run("{{p calc_table}}")
+    _set_run_rtl(r)
 
 
 def _section(doc, title: str, *, after=1, center=False, size=None) -> None:
@@ -417,19 +364,42 @@ def _section(doc, title: str, *, after=1, center=False, size=None) -> None:
     _text(doc, title, bold=True, color=DARK_BLUE, size=size or SECTION_SIZE, after=after, align=align)
 
 
-def _note(doc, flag, subtitle, body) -> None:
+def _note(doc, flag, headline, body) -> None:
     _text(doc, f"{{%p if {flag} %}}", after=0, size=NOTES_SIZE)
-    _text(doc, subtitle, bold=True, after=0, size=NOTES_SIZE)
+    _text(doc, headline, bold=True, after=0, size=NOTES_SIZE)
     _text(doc, body, after=0, size=NOTES_SIZE)
     _text(doc, "{%p endif %}", after=0, size=NOTES_SIZE)
 
 
 def _notes(doc) -> None:
+    _text(doc, "{%p if show_NOTES_SECTION %}", after=0, size=NOTES_SIZE)
+    _para(doc, before=10, after=2)
     _section(doc, "הערות והבהרות", after=2)
-    _note(doc, "show_DEATH_SECTION", "תוספת בגין מקרה פטירה", "תוספת בגין מקרה פטירה: התוספת מתחלקת בין החברים הזכאים בהתאם לפירוט.")
-    _note(doc, "show_WORK_GRANT_SECTION", "קיזוז בגין מענק עידוד עבודה", "קיזוז בגין מענק עידוד עבודה כמפורט בתחשיב.")
-    _note(doc, "show_NEW_MEMBER_SECTION", "זכאותך תקום לאחר קבלתך לחברות בקיבוץ", "זכאותך תקום לאחר קבלתך לחברות בקיבוץ.")
-    _note(doc, "show_BUILDING_DEBT_SECTION", "חוב בגין בנייה פרטית", "ידוע לי כי יש לי חוב בגין בנייה פרטית אשר יקוזז מסכום זה.")
+    _note(
+        doc,
+        "show_DEATH_SECTION",
+        "תוספת בגין מקרה פטירה",
+        "תוספת בגין מקרה פטירה: התוספת מתחלקת בין החברים הזכאים בהתאם לפירוט.",
+    )
+    _note(
+        doc,
+        "show_WORK_GRANT_SECTION",
+        "קיזוז בגין מענק עידוד עבודה",
+        "קיזוז בגין מענק עידוד עבודה כמפורט בתחשיב.",
+    )
+    _note(
+        doc,
+        "show_NEW_MEMBER_SECTION",
+        "זכאותך תקום לאחר קבלתך לחברות בקיבוץ",
+        "זכאותך תקום לאחר קבלתך לחברות בקיבוץ.",
+    )
+    _note(
+        doc,
+        "show_BUILDING_DEBT_SECTION",
+        "חוב בגין בנייה פרטית",
+        "ידוע לי כי יש לי חוב בגין בנייה פרטית אשר יקוזז מסכום זה.",
+    )
+    _text(doc, "{%p endif %}", after=0, size=NOTES_SIZE)
 
 
 def _receipt(doc) -> None:
@@ -450,48 +420,88 @@ def _receipt(doc) -> None:
     _signature(doc)
 
 
+def _date_space_paragraph(cell) -> None:
+    """Reserve space for the PDF date field — no drawn box in DOCX."""
+    p = cell.add_paragraph()
+    _set_paragraph_rtl(p, align=WD_ALIGN_PARAGRAPH.RIGHT)
+    fmt = p.paragraph_format
+    fmt.space_before = Pt(0)
+    fmt.space_after = Pt(0)
+    fmt.left_indent = Cm(0.2)
+    fmt.right_indent = Cm(0.2)
+
+    p_pr = p._p.get_or_add_pPr()
+    spacing = OxmlElement("w:spacing")
+    spacing.set(qn("w:before"), "0")
+    spacing.set(qn("w:after"), "0")
+    spacing.set(qn("w:line"), "560")
+    spacing.set(qn("w:lineRule"), "exact")
+    p_pr.append(spacing)
+
+    _set_run_rtl(
+        p.add_run(DATE_BOX_MARKER),
+        size=Pt(1),
+        color=RGBColor(0xFF, 0xFF, 0xFF),
+    )
+
+
+def _signature_space_paragraph(cell) -> None:
+    """Reserve vertical space for the PDF signature field — no drawn box in DOCX."""
+    p = cell.add_paragraph()
+    _set_paragraph_rtl(p, align=WD_ALIGN_PARAGRAPH.RIGHT)
+    fmt = p.paragraph_format
+    fmt.space_before = Pt(0)
+    fmt.space_after = Pt(0)
+    fmt.left_indent = Cm(4.6)
+    fmt.right_indent = Cm(0.3)
+
+    p_pr = p._p.get_or_add_pPr()
+    spacing = OxmlElement("w:spacing")
+    spacing.set(qn("w:before"), "0")
+    spacing.set(qn("w:after"), "0")
+    spacing.set(qn("w:line"), "560")
+    spacing.set(qn("w:lineRule"), "exact")
+    p_pr.append(spacing)
+
+    _set_run_rtl(
+        p.add_run(SIG_BOX_MARKER),
+        size=Pt(1),
+        color=RGBColor(0xFF, 0xFF, 0xFF),
+    )
+
+
 def _signature(doc) -> None:
+    """Title + reserved space (left); date line (right). Box drawn only in PDF."""
     _para(doc, before=2, after=2)
     t = doc.add_table(rows=1, cols=2)
     t.alignment = WD_TABLE_ALIGNMENT.RIGHT
     _table_rtl(t)
     _table_width(t, 18.3)
-    _row_height(t.rows[0], 780)
+    _row_height(t.rows[0], 900)
 
     date_c = t.rows[0].cells[0]
     sig_c = t.rows[0].cells[1]
-    date_c.width = Cm(8.0)
-    sig_c.width = Cm(9.0)
+    date_c.width = Cm(5.5)
+    sig_c.width = Cm(12.8)
 
-    _cell(date_c, "תאריך: ___________________", align=WD_ALIGN_PARAGRAPH.RIGHT, size=BODY_SIZE)
-    date_c.vertical_alignment = WD_ALIGN_VERTICAL.BOTTOM
+    _pad(date_c, t=40, b=90, s=50, e=30)
+    date_c.vertical_alignment = WD_ALIGN_VERTICAL.TOP
+    date_c.text = ""
+    dp = date_c.paragraphs[0]
+    _set_paragraph_rtl(dp, align=WD_ALIGN_PARAGRAPH.RIGHT)
+    dp.paragraph_format.space_after = Pt(10)
+    _set_run_rtl(dp.add_run("תאריך:"), size=BODY_SIZE)
+    _date_space_paragraph(date_c)
 
+    _pad(sig_c, t=40, b=90, s=20, e=40)
     sig_c.text = ""
-    p0 = sig_c.paragraphs[0]
-    _set_paragraph_rtl(p0, align=WD_ALIGN_PARAGRAPH.RIGHT)
-    _set_run_rtl(p0.add_run("חתימה (שדה לחתימה דיגיטלית)"), size=Pt(9))
-
-    p1 = sig_c.add_paragraph()
-    _set_paragraph_rtl(p1, align=WD_ALIGN_PARAGRAPH.RIGHT)
-    p_pr = p1._p.get_or_add_pPr()
-    shd = OxmlElement("w:shd")
-    shd.set(qn("w:fill"), LIGHT_BLUE_HEX)
-    shd.set(qn("w:val"), "clear")
-    p_pr.append(shd)
-    bdr = OxmlElement("w:pBdr")
-    for side in ("top", "left", "bottom", "right"):
-        e = OxmlElement(f"w:{side}")
-        e.set(qn("w:val"), "dashed")
-        e.set(qn("w:sz"), "6")
-        e.set(qn("w:color"), "5B9BD5")
-        bdr.append(e)
-    p_pr.append(bdr)
-    spacing = OxmlElement("w:spacing")
-    spacing.set(qn("w:before"), "55")
-    spacing.set(qn("w:after"), "165")
-    p_pr.append(spacing)
-    p1.add_run(" ")
-    sig_c.vertical_alignment = WD_ALIGN_VERTICAL.TOP
+    lp = sig_c.paragraphs[0]
+    _set_paragraph_rtl(lp, align=WD_ALIGN_PARAGRAPH.CENTER)
+    lp.paragraph_format.space_after = Pt(10)
+    lp.paragraph_format.left_indent = Cm(4.6)
+    lp.paragraph_format.right_indent = Cm(0.3)
+    _set_run_rtl(lp.add_run("חתימה (שדה לחתימה דיגיטלית)"), size=Pt(9))
+    _signature_space_paragraph(sig_c)
     _para(doc, after=3)
 
 

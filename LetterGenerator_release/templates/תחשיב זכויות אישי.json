@@ -31,11 +31,17 @@
   "signature_field": {
     "field_name": "MemberSignature",
     "page": "last",
-    "width": 200,
-    "height": 52,
-    "margin_bottom": 118,
-    "margin_left": 108,
+    "width": 225,
+    "height": 42,
+    "margin_bottom": 95,
+    "margin_left": 50,
     "anchor_text": "חתימה (שדה לחתימה דיגיטלית)"
+  },
+  "date_field": {
+    "field_name": "SignDateEntry",
+    "page": "last",
+    "width": 130,
+    "height": 42
   },
   "validation": {
     "required_excel_columns": [
@@ -54,12 +60,6 @@
     "required_template_variables": [
       "FULL_NAME",
       "TODAY",
-      "H",
-      "I",
-      "J",
-      "L",
-      "M",
-      "O",
       "P",
       "BANK_ACCOUNT"
     ],

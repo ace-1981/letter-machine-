@@ -9,6 +9,7 @@ from pathlib import Path
 from PySide6.QtCore import QThread, Qt
 from PySide6.QtWidgets import (
     QApplication,
+    QButtonGroup,
     QComboBox,
     QFileDialog,
     QHBoxLayout,
@@ -18,6 +19,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QProgressBar,
+    QRadioButton,
     QSpinBox,
     QTextEdit,
     QVBoxLayout,
@@ -26,6 +28,7 @@ from PySide6.QtWidgets import (
 
 from src.app_paths import get_default_output_dir, get_templates_dir
 from src.config_loader import load_template_config
+from src.output_format import OUTPUT_DOCX, OUTPUT_PDF
 from src.startup_check import check_startup_templates
 from src.ui.worker import GenerationWorker
 
@@ -62,6 +65,19 @@ class MainWindow(QMainWindow):
         self.letter_combo = QComboBox()
         layout.addWidget(QLabel("סוג מכתב:"))
         layout.addWidget(self.letter_combo)
+
+        layout.addWidget(QLabel("סוג פלט:"))
+        output_type_row = QHBoxLayout()
+        self.output_pdf_radio = QRadioButton("PDF")
+        self.output_docx_radio = QRadioButton("Word / DOCX")
+        self.output_pdf_radio.setChecked(True)
+        self._output_format_group = QButtonGroup(self)
+        self._output_format_group.addButton(self.output_pdf_radio)
+        self._output_format_group.addButton(self.output_docx_radio)
+        output_type_row.addWidget(self.output_pdf_radio)
+        output_type_row.addWidget(self.output_docx_radio)
+        output_type_row.addStretch()
+        layout.addLayout(output_type_row)
 
         row_layout = QHBoxLayout()
         row_layout.addWidget(QLabel("שורה לתצוגה מקדימה:"))
@@ -137,6 +153,9 @@ class MainWindow(QMainWindow):
         data = self.letter_combo.currentData()
         return Path(data) if data else None
 
+    def _output_format(self) -> str:
+        return OUTPUT_DOCX if self.output_docx_radio.isChecked() else OUTPUT_PDF
+
     def _validate_inputs(self) -> tuple[Path, Path, Path] | None:
         excel = Path(self.excel_edit.text().strip())
         output = Path(self.output_edit.text().strip())
@@ -166,7 +185,9 @@ class MainWindow(QMainWindow):
             return
         excel, output, config = inputs
         self.error_box.clear()
-        self._start_worker("preview", excel, config, output, self.preview_row.value() - 1)
+        self._start_worker(
+            "preview", excel, config, output, self.preview_row.value() - 1, self._output_format()
+        )
 
     def _run_batch(self) -> None:
         inputs = self._validate_inputs()
@@ -175,7 +196,7 @@ class MainWindow(QMainWindow):
         excel, output, config = inputs
         self.error_box.clear()
         self.progress.setValue(0)
-        self._start_worker("batch", excel, config, output, 0)
+        self._start_worker("batch", excel, config, output, 0, self._output_format())
 
     def _start_worker(
         self,
@@ -184,6 +205,7 @@ class MainWindow(QMainWindow):
         config: Path,
         output: Path,
         row_index: int,
+        output_format: str,
     ) -> None:
         self._set_busy(True)
         self.open_dir_btn.setEnabled(False)
@@ -191,7 +213,9 @@ class MainWindow(QMainWindow):
         output.mkdir(parents=True, exist_ok=True)
 
         self._thread = QThread()
-        self._worker = GenerationWorker(mode, excel, config, output, row_index)
+        self._worker = GenerationWorker(
+            mode, excel, config, output, row_index, output_format=output_format
+        )
         self._worker.moveToThread(self._thread)
         self._thread.started.connect(self._worker.run)
         self._worker.log.connect(self._append_log)
@@ -218,12 +242,14 @@ class MainWindow(QMainWindow):
     def _on_finished(self, result: dict) -> None:
         self._set_busy(False)
         self.open_dir_btn.setEnabled(True)
-        if result.get("mode") == "preview" and result.get("pdf"):
-            self._open_file(Path(result["pdf"]))
+        if result.get("mode") == "preview" and result.get("file"):
+            self._open_file(Path(result["file"]))
         if result.get("mode") == "batch":
+            fmt = result.get("output_format_label", "PDF")
             QMessageBox.information(
                 self,
                 "הפקה הסתיימה",
+                f"סוג פלט: {fmt}\n"
                 f"סה\"כ רשומות: {result['total']}\n"
                 f"הופקו בהצלחה: {result['success']}\n"
                 f"שגיאות: {result['errors']}",

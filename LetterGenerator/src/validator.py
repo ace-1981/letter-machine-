@@ -31,13 +31,17 @@ def validate_all(
     template_docx: Path,
     output_dir: Path,
     pdf_preferred: str | None = None,
+    output_format: str = "pdf",
 ) -> ValidationResult:
+    from src.output_format import OUTPUT_PDF, normalize_output_format
+
     result = ValidationResult(ok=True)
     _validate_excel_columns(excel_path, config, result)
     _validate_template_variables(template_docx, config, result)
     _validate_conditions(config, result)
     _validate_output_dir(output_dir, result)
-    _validate_pdf_converter(pdf_preferred, result)
+    if normalize_output_format(output_format) == OUTPUT_PDF:
+        _validate_pdf_converter(pdf_preferred, result)
     return result
 
 
@@ -75,8 +79,16 @@ def _validate_template_variables(docx_path: Path, config: dict, result: Validati
 
     required = set(config.get("validation", {}).get("required_template_variables", []))
     condition_flags = set(config.get("conditions", {}).keys())
-    allowed_extras = {"show_DEATH_SECTION", "show_WORK_GRANT_SECTION", "show_NEW_MEMBER_SECTION", "show_BUILDING_DEBT_SECTION"}
+    allowed_extras = {
+        "show_DEATH_SECTION",
+        "show_WORK_GRANT_SECTION",
+        "show_NEW_MEMBER_SECTION",
+        "show_BUILDING_DEBT_SECTION",
+        "show_NOTES_SECTION",
+    }
     allowed_extras.update(condition_flags)
+    allowed_extras.add("calc_table")
+    allowed_extras.add("table_rows")
 
     missing = required - found_vars
     for var in sorted(missing):

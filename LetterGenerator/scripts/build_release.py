@@ -10,7 +10,8 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-RELEASE_DIR = ROOT.parent / "LetterGenerator_release"
+RELEASE_DIR_NAME = os.environ.get("LG_RELEASE_DIR", "LetterGenerator_release")
+RELEASE_DIR = ROOT.parent / RELEASE_DIR_NAME
 TEMPLATE_FILES = (
     "תחשיב זכויות אישי.json",
     "תחשיב זכויות אישי.docx",
@@ -56,6 +57,10 @@ def run_pyinstaller(*, console: bool, name: str, clean: bool) -> Path:
             "win32com",
             "--hidden-import",
             "win32com.client",
+            "--hidden-import",
+            "docxcompose",
+            "--collect-submodules",
+            "docxcompose",
         ]
     )
     if console:
@@ -85,7 +90,12 @@ def _stage_portable(exe_path: Path, target: Path) -> None:
             raise FileNotFoundError(f"Missing template: {src}")
         shutil.copy2(src, templates_dir / name)
     (target / "output").mkdir()
-    shutil.copy2(ROOT / "release" / "README.txt", target / "README.txt")
+    readme = (
+        ROOT / "release" / "README_V1.1.txt"
+        if "V1.1" in RELEASE_DIR_NAME
+        else ROOT / "release" / "README.txt"
+    )
+    shutil.copy2(readme, target / "README.txt")
 
 
 def smoke_test_debug(exe_path: Path) -> None:

@@ -84,6 +84,24 @@ def get_cell_by_column_letter(df: pd.DataFrame, letter: str):
     return df.iloc[:, index]
 
 
+NOTE_SECTION_FLAGS = (
+    "show_DEATH_SECTION",
+    "show_WORK_GRANT_SECTION",
+    "show_NEW_MEMBER_SECTION",
+    "show_BUILDING_DEBT_SECTION",
+)
+
+
+def _parse_numeric(value) -> int | float:
+    if value is None or value == "":
+        return 0
+    try:
+        num = float(value)
+        return int(num) if num == int(num) else num
+    except (TypeError, ValueError):
+        return 0
+
+
 def row_to_context(df: pd.DataFrame, row_index: int, config: dict) -> dict:
     """Build template context from one Excel row (0-based data row index)."""
     if row_index < 0 or row_index >= len(df):
@@ -99,6 +117,10 @@ def row_to_context(df: pd.DataFrame, row_index: int, config: dict) -> dict:
         else:
             context[var_name] = value
 
+    for field in config.get("validation", {}).get("numeric_row_fields", []):
+        if field in context:
+            context[field] = _parse_numeric(context[field])
+
     for target, formula in config.get("computed_fields", {}).items():
         text = formula
         for key, val in context.items():
@@ -107,6 +129,8 @@ def row_to_context(df: pd.DataFrame, row_index: int, config: dict) -> dict:
 
     for flag_name, expression in config.get("conditions", {}).items():
         context[flag_name] = _evaluate_condition(expression, context)
+
+    context["show_NOTES_SECTION"] = any(context.get(flag) for flag in NOTE_SECTION_FLAGS)
 
     return context
 

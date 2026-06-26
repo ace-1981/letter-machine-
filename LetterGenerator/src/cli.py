@@ -63,15 +63,19 @@ def cmd_preview(args: argparse.Namespace) -> int:
             config_path=config,
             output_dir=output,
             row_index=row_index,
+            output_format=args.format,
             pdf_preferred="word",
-            keep_docx=False,
         )
     except Exception as exc:
         msg = str(exc)
         sys.stderr.buffer.write(msg.encode("utf-8", errors="replace") + b"\n")
         sys.stderr.buffer.flush()
         return 1
-    _emit(str(result["pdf"]))
+    out_path = result.get("pdf") or result.get("docx")
+    if not out_path:
+        print("No output file created.", file=sys.stderr)
+        return 1
+    _emit(str(out_path))
     return 0
 
 
@@ -101,6 +105,12 @@ def run_cli(argv: list[str] | None = None) -> int:
     preview.add_argument("--row", type=int, default=1, help="Excel data row (1-based)")
     preview.add_argument("--output", help="Output directory (default: output/)")
     preview.add_argument("--config", help="JSON config path (default: first in templates/)")
+    preview.add_argument(
+        "--format",
+        choices=("pdf", "docx"),
+        default="pdf",
+        help="Output format: pdf (default) or docx",
+    )
 
     sub.add_parser("info", help="Print app root and loaded template info")
 
