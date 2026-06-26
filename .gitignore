@@ -17,12 +17,18 @@ LetterGenerator_release/app.exe
 LetterGenerator_release/output/
 LetterGenerator_V1.1_Portable/app.exe
 LetterGenerator_V1.1_Portable/**/app.exe
+LetterGenerator_V1.2_Portable/app.exe
+LetterGenerator_V1.2_Portable/**/app.exe
+LetterGenerator_V1.2_Portable/
 *.zip
 
 # Local audit / test copies
 Audit Folder With Spaces/
 בדיקת מחולל V1.2/
 cursor/v1_2_audit/samples/
+cursor/build_tests/
+cursor/perf_regression/
+cursor/perf_v1_2_pooling/
 LetterGenerator/samples/o0_debug/
 LetterGenerator/samples/o0_debug2/
 LetterGenerator/samples/o0_fix_test/

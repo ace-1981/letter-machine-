@@ -15,6 +15,11 @@ LAST_ROW_HEX = "FFF2CC"
 WHITE_HEX = "FFFFFF"
 FONT_NAME = "Arial"
 TABLE_SIZE = Pt(10.5)
+LINE_SPACING = 1.1
+CELL_PAD_HEADER_PT = 7
+CELL_PAD_NORMAL_PT = 6
+CELL_PAD_TOTAL_PT = 8
+CELL_PAD_SIDE_PT = 2
 PAGE_WIDTH_CM = 21.0
 PAGE_MARGIN_CM = 1.0
 TABLE_WIDTH_CM = 14.9
@@ -141,6 +146,66 @@ def _set_run_rtl(run, *, bold=False, size=None, white=False) -> None:
     r_pr.append(lang)
 
 
+def _pt_to_twips(pt: float) -> str:
+    return str(int(round(pt * 20)))
+
+
+def _set_line_spacing(paragraph, factor: float = LINE_SPACING) -> None:
+    p_pr = paragraph._p.get_or_add_pPr()
+    node = p_pr.find(qn("w:spacing"))
+    if node is not None:
+        p_pr.remove(node)
+    sp = OxmlElement("w:spacing")
+    sp.set(qn("w:line"), str(int(round(factor * 240))))
+    sp.set(qn("w:lineRule"), "auto")
+    sp.set(qn("w:before"), "0")
+    sp.set(qn("w:after"), "0")
+    p_pr.append(sp)
+
+
+def _set_cell_padding(
+    cell,
+    *,
+    top_pt: float = CELL_PAD_NORMAL_PT,
+    bottom_pt: float = CELL_PAD_NORMAL_PT,
+    side_pt: float = CELL_PAD_SIDE_PT,
+) -> None:
+    tc_pr = cell._tc.get_or_add_tcPr()
+    node = tc_pr.find(qn("w:tcMar"))
+    if node is not None:
+        tc_pr.remove(node)
+    mar = OxmlElement("w:tcMar")
+    for side, pt in (
+        ("top", top_pt),
+        ("bottom", bottom_pt),
+        ("left", side_pt),
+        ("right", side_pt),
+    ):
+        el = OxmlElement(f"w:{side}")
+        el.set(qn("w:w"), _pt_to_twips(pt))
+        el.set(qn("w:type"), "dxa")
+        mar.append(el)
+    tc_pr.append(mar)
+
+
+def _set_cell_valign(cell, align: str = "center") -> None:
+    tc_pr = cell._tc.get_or_add_tcPr()
+    node = tc_pr.find(qn("w:vAlign"))
+    if node is not None:
+        tc_pr.remove(node)
+    va = OxmlElement("w:vAlign")
+    va.set(qn("w:val"), align)
+    tc_pr.append(va)
+
+
+def _cell_padding_for_row(*, header: bool = False, total: bool = False) -> tuple[float, float]:
+    if header:
+        return CELL_PAD_HEADER_PT, CELL_PAD_HEADER_PT
+    if total:
+        return CELL_PAD_TOTAL_PT, CELL_PAD_TOTAL_PT
+    return CELL_PAD_NORMAL_PT, CELL_PAD_NORMAL_PT
+
+
 def _cell(
     cell,
     content,
@@ -150,10 +215,16 @@ def _cell(
     align=WD_ALIGN_PARAGRAPH.RIGHT,
     white=False,
     amount=False,
+    pad_top_pt: float | None = None,
+    pad_bottom_pt: float | None = None,
 ):
     cell.text = ""
     p = cell.paragraphs[0]
     _set_paragraph_rtl(p, align=align)
+    p.paragraph_format.space_before = Pt(0)
+    p.paragraph_format.space_after = Pt(0)
+    p.paragraph_format.line_spacing = LINE_SPACING
+    _set_line_spacing(p)
     text = content if not amount else f"\u200e{content}"
     r = p.add_run(text)
     if amount:
@@ -162,6 +233,10 @@ def _cell(
         _set_run_rtl(r, bold=bold, size=TABLE_SIZE, white=True)
     else:
         _set_run_rtl(r, bold=bold, size=TABLE_SIZE)
+    top = pad_top_pt if pad_top_pt is not None else CELL_PAD_NORMAL_PT
+    bottom = pad_bottom_pt if pad_bottom_pt is not None else CELL_PAD_NORMAL_PT
+    _set_cell_padding(cell, top_pt=top, bottom_pt=bottom)
+    _set_cell_valign(cell)
     if fill:
         _shade(cell, fill)
 
@@ -183,6 +258,7 @@ def _populate_calc_table(table, rows: list[dict]) -> None:
             tr.cells[i].width = Cm(w)
 
     headers = ("סעיף", "תיאור", "סכום (₪)")
+    header_pad = _cell_padding_for_row(header=True)
     for i, h in enumerate(headers):
         _cell(
             table.rows[0].cells[i],
@@ -191,6 +267,8 @@ def _populate_calc_table(table, rows: list[dict]) -> None:
             fill=DARK_BLUE_HEX,
             align=WD_ALIGN_PARAGRAPH.RIGHT,
             white=True,
+            pad_top_pt=header_pad[0],
+            pad_bottom_pt=header_pad[1],
         )
         _borders(table.rows[0].cells[i], color=DARK_BLUE_HEX)
 
@@ -198,6 +276,8 @@ def _populate_calc_table(table, rows: list[dict]) -> None:
     for ri, row in enumerate(rows, 1):
         fill = _row_fill(ri, row, last_index)
         bold = bool(row.get("is_total")) or ri == last_index
+        is_total = bool(row.get("is_total")) or ri == last_index
+        pad_top, pad_bottom = _cell_padding_for_row(total=is_total)
         vals = (row["num"], row["desc"], row["amount"])
         for ci, val in enumerate(vals):
             _cell(
@@ -207,6 +287,8 @@ def _populate_calc_table(table, rows: list[dict]) -> None:
                 fill=fill,
                 align=WD_ALIGN_PARAGRAPH.RIGHT,
                 amount=ci == 2,
+                pad_top_pt=pad_top,
+                pad_bottom_pt=pad_bottom,
             )
             _borders(table.rows[ri].cells[ci])
 

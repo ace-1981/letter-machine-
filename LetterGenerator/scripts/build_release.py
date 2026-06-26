@@ -90,11 +90,14 @@ def _stage_portable(exe_path: Path, target: Path) -> None:
             raise FileNotFoundError(f"Missing template: {src}")
         shutil.copy2(src, templates_dir / name)
     (target / "output").mkdir()
-    readme = (
-        ROOT / "release" / "README_V1.1.txt"
-        if "V1.1" in RELEASE_DIR_NAME
-        else ROOT / "release" / "README.txt"
-    )
+    output_readme = ROOT / "release" / "OUTPUT_README.txt"
+    if output_readme.is_file():
+        shutil.copy2(output_readme, target / "output" / "README.txt")
+    readme = ROOT / "release" / "README.txt"
+    if "V1.2" in RELEASE_DIR_NAME:
+        readme = ROOT / "release" / "README_V1.2.txt"
+    elif "V1.1" in RELEASE_DIR_NAME:
+        readme = ROOT / "release" / "README_V1.1.txt"
     shutil.copy2(readme, target / "README.txt")
 
 

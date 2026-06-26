@@ -92,14 +92,23 @@ NOTE_SECTION_FLAGS = (
 )
 
 
-def _parse_numeric(value) -> int | float:
+def _try_parse_numeric(value) -> int | float | None:
+    """Parse numeric Excel value; return None if non-empty but not a number."""
     if value is None or value == "":
         return 0
+    if isinstance(value, str) and not value.strip():
+        return 0
     try:
-        num = float(value)
+        num = float(str(value).strip().replace(",", ""))
         return int(num) if num == int(num) else num
     except (TypeError, ValueError):
-        return 0
+        return None
+
+
+def _parse_numeric(value) -> int | float:
+    """Legacy helper — empty → 0 only."""
+    parsed = _try_parse_numeric(value)
+    return 0 if parsed is None and (value is None or value == "" or str(value).strip() == "") else (parsed if parsed is not None else 0)
 
 
 def row_to_context(df: pd.DataFrame, row_index: int, config: dict) -> dict:
@@ -117,9 +126,13 @@ def row_to_context(df: pd.DataFrame, row_index: int, config: dict) -> dict:
         else:
             context[var_name] = value
 
-    for field in config.get("validation", {}).get("numeric_row_fields", []):
+    numeric_fields = set(config.get("validation", {}).get("numeric_row_fields", []))
+
+    for field in numeric_fields:
         if field in context:
-            context[field] = _parse_numeric(context[field])
+            parsed = _try_parse_numeric(context[field])
+            if parsed is not None:
+                context[field] = parsed
 
     for target, formula in config.get("computed_fields", {}).items():
         text = formula
@@ -128,17 +141,21 @@ def row_to_context(df: pd.DataFrame, row_index: int, config: dict) -> dict:
         context[target] = text.strip()
 
     for flag_name, expression in config.get("conditions", {}).items():
-        context[flag_name] = _evaluate_condition(expression, context)
+        context[flag_name] = _evaluate_condition(expression, context, numeric_fields)
 
     context["show_NOTES_SECTION"] = any(context.get(flag) for flag in NOTE_SECTION_FLAGS)
 
     return context
 
 
-def _evaluate_condition(expression: str, context: dict) -> bool:
+def _evaluate_condition(expression: str, context: dict, numeric_fields: set[str] | None = None) -> bool:
+    numeric_fields = numeric_fields or set()
     expr = expression.strip()
     for key, value in context.items():
-        if isinstance(value, str):
+        if key in numeric_fields:
+            parsed = _try_parse_numeric(value)
+            replacement = "0" if parsed is None else str(parsed)
+        elif isinstance(value, str):
             replacement = repr(value)
         else:
             replacement = str(value)

@@ -9,6 +9,33 @@ import time
 from abc import ABC, abstractmethod
 from pathlib import Path
 
+# Post-convert delay for single-shot Word COM (batch uses 0). Override: LETTER_GEN_WORD_SLEEP
+_WORD_POST_SLEEP_S = float(os.environ.get("LETTER_GEN_WORD_SLEEP", "0"))
+_WORD_AVAILABLE: bool | None = None
+
+
+def _probe_word_available() -> bool:
+    global _WORD_AVAILABLE
+    if _WORD_AVAILABLE is not None:
+        return _WORD_AVAILABLE
+    if os.environ.get("LETTER_GEN_TEST_NO_WORD") == "1":
+        _WORD_AVAILABLE = False
+        return False
+    try:
+        import win32com.client  # noqa: F401
+    except ImportError:
+        _WORD_AVAILABLE = False
+        return False
+    try:
+        import win32com.client
+
+        word = win32com.client.Dispatch("Word.Application")
+        word.Quit()
+        _WORD_AVAILABLE = True
+    except Exception:
+        _WORD_AVAILABLE = False
+    return _WORD_AVAILABLE
+
 
 class PdfConversionError(Exception):
     pass
@@ -30,6 +57,9 @@ class PdfConverter(ABC):
     @property
     def name(self) -> str:
         return self.__class__.__name__
+
+    def close(self) -> None:
+        """Release resources held by a batch session (no-op for stateless converters)."""
 
 
 class LibreOfficePdfConverter(PdfConverter):
@@ -102,20 +132,7 @@ class WordComPdfConverter(PdfConverter):
     WD_LANGUAGE_HEBREW = 1037
 
     def is_available(self) -> bool:
-        if os.environ.get("LETTER_GEN_TEST_NO_WORD") == "1":
-            return False
-        try:
-            import win32com.client  # noqa: F401
-        except ImportError:
-            return False
-        try:
-            import win32com.client
-
-            word = win32com.client.Dispatch("Word.Application")
-            word.Quit()
-            return True
-        except Exception:
-            return False
+        return _probe_word_available()
 
     def availability_message(self) -> str:
         if self.is_available():
@@ -130,6 +147,7 @@ class WordComPdfConverter(PdfConverter):
         )
 
     def convert(self, docx_path: Path, pdf_path: Path) -> None:
+        """Single conversion — opens and closes Word (preview / single letter)."""
         if not self.is_available():
             raise PdfConversionError(self.availability_message())
 
@@ -137,25 +155,94 @@ class WordComPdfConverter(PdfConverter):
 
         pdf_path.parent.mkdir(parents=True, exist_ok=True)
         word = None
-        doc = None
         try:
             word = win32com.client.Dispatch("Word.Application")
             word.Visible = False
-            doc = word.Documents.Open(str(docx_path.resolve()))
-            _apply_rtl_for_pdf_export(doc)
-            doc.ExportAsFixedFormat(
-                OutputFileName=str(pdf_path.resolve()),
-                ExportFormat=self.WD_EXPORT_FORMAT_PDF,
-                OpenAfterExport=False,
-            )
+            _export_docx_to_pdf(word, docx_path, pdf_path)
         except Exception as exc:
             raise PdfConversionError(f"Word COM conversion failed: {exc}") from exc
         finally:
-            if doc is not None:
-                doc.Close(False)
             if word is not None:
                 word.Quit()
-            time.sleep(0.5)
+            if _WORD_POST_SLEEP_S > 0:
+                time.sleep(_WORD_POST_SLEEP_S)
+
+
+class WordComBatchSession(PdfConverter):
+    """Reuse one Word.Application for an entire PDF batch."""
+
+    def __init__(self) -> None:
+        self._word = None
+
+    @property
+    def name(self) -> str:
+        return "WordComBatchSession"
+
+    def is_available(self) -> bool:
+        return WordComPdfConverter().is_available()
+
+    def availability_message(self) -> str:
+        return WordComPdfConverter().availability_message()
+
+    def start(self) -> None:
+        if self._word is not None:
+            return
+        if not self.is_available():
+            raise PdfConversionError(self.availability_message())
+        import win32com.client
+
+        self._word = win32com.client.Dispatch("Word.Application")
+        self._word.Visible = False
+
+    def convert(self, docx_path: Path, pdf_path: Path) -> None:
+        if self._word is None:
+            self.start()
+        pdf_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            _export_docx_to_pdf(self._word, docx_path, pdf_path)
+        except Exception as exc:
+            raise PdfConversionError(f"Word COM conversion failed: {exc}") from exc
+
+    def close(self) -> None:
+        if self._word is None:
+            return
+        word = self._word
+        self._word = None
+        try:
+            while word.Documents.Count > 0:
+                word.Documents(1).Close(False)
+        except Exception:
+            pass
+        try:
+            word.Quit()
+        except Exception:
+            pass
+
+    def __enter__(self) -> WordComBatchSession:
+        self.start()
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        self.close()
+
+
+def _export_docx_to_pdf(word, docx_path: Path, pdf_path: Path) -> None:
+    """Open one DOCX on an existing Word instance, export PDF, close document only."""
+    doc = None
+    try:
+        doc = word.Documents.Open(str(docx_path.resolve()))
+        _apply_rtl_for_pdf_export(doc)
+        doc.ExportAsFixedFormat(
+            OutputFileName=str(pdf_path.resolve()),
+            ExportFormat=WordComPdfConverter.WD_EXPORT_FORMAT_PDF,
+            OpenAfterExport=False,
+        )
+    finally:
+        if doc is not None:
+            try:
+                doc.Close(False)
+            except Exception:
+                pass
 
 
 def _apply_rtl_for_pdf_export(doc) -> None:
@@ -192,6 +279,14 @@ class PdfConverterFactory:
             + " | "
             + WordComPdfConverter().availability_message()
         )
+
+    @staticmethod
+    def create_batch(preferred: str | None = None) -> PdfConverter:
+        """PDF converter for multi-row batch — Word COM reuses one Application instance."""
+        single = PdfConverterFactory.create(preferred)
+        if isinstance(single, WordComPdfConverter):
+            return WordComBatchSession()
+        return single
 
     @staticmethod
     def list_status() -> list[str]:

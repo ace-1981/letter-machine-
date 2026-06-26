@@ -46,35 +46,39 @@ def generate_letters(
     df = read_excel(excel_path)
     pdf_converter = None
     if output_format == OUTPUT_PDF:
-        pdf_converter = converter or PdfConverterFactory.create(pdf_preferred)
+        pdf_converter = converter or PdfConverterFactory.create_batch(pdf_preferred)
     sig_cfg = config["signature_field"]
 
     errors: list[dict] = []
     success = 0
 
-    for row_index in range(len(df)):
-        excel_row_number = row_index + 2  # 1-based with header
-        try:
-            _generate_single_row(
-                df=df,
-                row_index=row_index,
-                config=config,
-                template_docx=template_docx,
-                output_dir=output_dir,
-                pdf_converter=pdf_converter,
-                sig_cfg=sig_cfg,
-                output_format=output_format,
-            )
-            success += 1
-        except Exception as exc:
-            errors.append(
-                {
-                    "excel_row": excel_row_number,
-                    "error": str(exc),
-                }
-            )
-        if on_progress:
-            on_progress(row_index + 1, len(df))
+    try:
+        for row_index in range(len(df)):
+            excel_row_number = row_index + 2  # 1-based with header
+            try:
+                _generate_single_row(
+                    df=df,
+                    row_index=row_index,
+                    config=config,
+                    template_docx=template_docx,
+                    output_dir=output_dir,
+                    pdf_converter=pdf_converter,
+                    sig_cfg=sig_cfg,
+                    output_format=output_format,
+                )
+                success += 1
+            except Exception as exc:
+                errors.append(
+                    {
+                        "excel_row": excel_row_number,
+                        "error": str(exc),
+                    }
+                )
+            if on_progress:
+                on_progress(row_index + 1, len(df))
+    finally:
+        if pdf_converter is not None:
+            pdf_converter.close()
 
     if errors:
         write_errors_report(output_dir / "errors_report.csv", errors)
