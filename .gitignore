@@ -59,5 +59,9 @@ Thumbs.db
 .idea/
 .vscode/
 
+# Office lock / temp files
+~$*
+**/~$*
+
 # Test artifacts
 LetterGenerator/samples/json_influence_test/_temp_config.json
