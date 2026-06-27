@@ -1,0 +1,8 @@
+Version: 1.2.1
+Based on: 1.2
+Date: 27/06/2026
+Change type: patch
+Change summary: template/layout fixes after V1.2
+app.exe: unchanged unless explicitly rebuilt
+Build: no new build unless stated otherwise
+Status: latest usable version

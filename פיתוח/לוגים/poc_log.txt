@@ -1,0 +1,31 @@
+﻿=== Letter Generator POC ===
+
+1. Creating sample Excel...
+2. Creating DOCX template...
+3. PDF converter status:
+   - LibreOffice not found. Install LibreOffice or add soffice.exe to PATH. Common path: C:\Program Files\LibreOffice\program\soffice.exe
+   - Microsoft Word COM automation is available.
+
+4. Running validation + generation (row 0)...
+
+=== POC Results ===
+DOCX:  C:\Users\dfusb\Documents\Î×ÎøÎòÎáÎ¬ Î×ÎøÎ¬ÎæÎÖÎØ\LetterGenerator\samples\poc_output\12345 ÎøÎöÎƒ ÎÖÎ®Î¿ÎÉÎ£ Î¬ÎùÎ®ÎÖÎæ ÎûÎøÎòÎÖÎòÎ¬ ÎÉÎÖÎ®ÎÖ.docx
+PDF:   C:\Users\dfusb\Documents\Î×ÎøÎòÎáÎ¬ Î×ÎøÎ¬ÎæÎÖÎØ\LetterGenerator\samples\poc_output\12345 ÎøÎöÎƒ ÎÖÎ®Î¿ÎÉÎ£ Î¬ÎùÎ®ÎÖÎæ ÎûÎøÎòÎÖÎòÎ¬ ÎÉÎÖÎ®ÎÖ.pdf
+Name:  12345 ÎøÎöÎƒ ÎÖÎ®Î¿ÎÉÎ£ Î¬ÎùÎ®ÎÖÎæ ÎûÎøÎòÎÖÎòÎ¬ ÎÉÎÖÎ®ÎÖ.pdf
+Converter: WordComPdfConverter
+Warnings:
+  - PDF converter selected: WordComPdfConverter
+
+Signature field verification (programmatic):
+{
+  "found": true,
+  "field_name": "MemberSignature",
+  "field_type": "/Sig",
+  "is_signature_field": true,
+  "message": "Valid /Sig field detected"
+}
+
+Report: C:\Users\dfusb\Documents\Î×ÎøÎòÎáÎ¬ Î×ÎøÎ¬ÎæÎÖÎØ\cursor\POC-Î¬ÎòÎªÎÉÎòÎ¬.md
+
+POC completed successfully.
+Please open the PDF in Adobe Reader or Foxit and verify 'Fill & Sign' shows a signature field.

@@ -1,0 +1,8 @@
+Version: 1.2.4
+Based on: 1.2.3
+Date: 27/06/2026
+Change type: patch + rebuild
+Change summary: table layout fix (סעיף column widened/centered, right gap from frame) + signature PDF layering fix (no white overlay, signature widget on top, date created before signature)
+app.exe: REBUILT (includes signature layering fix)
+Build: new PyInstaller build
+Status: latest usable version

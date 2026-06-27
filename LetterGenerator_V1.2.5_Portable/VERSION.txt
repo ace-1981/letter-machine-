@@ -1,0 +1,8 @@
+Version: 1.2.5
+Based on: 1.2.4
+Date: 27/06/2026
+Change type: patch (template only)
+Change summary: RTL robustness fix - paragraphs/styles/document-defaults use physical jc=right + bidi instead of the legacy left+bidi mirror. Editing the Word template (adding a letter, bold, underline, formatting) no longer flips the document to the left; alignment stays right even if Word strips a paragraph's RTL properties.
+app.exe: unchanged (reused from 1.2.4 - templates are external)
+Build: no new PyInstaller build
+Status: latest usable version

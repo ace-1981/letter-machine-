@@ -8,19 +8,23 @@ venv/
 .env
 
 # PyInstaller
-LetterGenerator/build/
-LetterGenerator/dist/
 *.spec
 
+# Build output dirs (any location)
+**/build/
+**/dist/
+
+# Executables and build archives (any version/location) - exceed GitHub 100MB
+*.exe
+*.pkg
+*.pyz
+
 # Portable release binaries (build locally; GitHub limit 100MB)
-LetterGenerator_release/app.exe
 LetterGenerator_release/output/
-LetterGenerator_V1.1_Portable/app.exe
-LetterGenerator_V1.1_Portable/**/app.exe
-LetterGenerator_V1.2_Portable/app.exe
-LetterGenerator_V1.2_Portable/**/app.exe
-LetterGenerator_V1.2_Portable/
 *.zip
+
+# Temporary working area
+פיתוח/זמני/
 
 # Local audit / test copies
 Audit Folder With Spaces/

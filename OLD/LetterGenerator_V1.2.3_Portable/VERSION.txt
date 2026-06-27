@@ -1,0 +1,8 @@
+Version: 1.2.3
+Based on: 1.2.1 (rollback from broken 1.2.2)
+Date: 27/06/2026
+Change type: patch
+Change summary: restored V1.2.1 document layout; PDF signature field layering fix in source (date then sig, annot on top)
+app.exe: unchanged — signature layering fix requires approved rebuild
+Build: no new build
+Status: latest usable version
